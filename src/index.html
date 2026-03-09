@@ -185,9 +185,38 @@
             font-size: 1.05rem;
             height: 24px;
         }
+
+        .pikmin-overlay {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+            opacity: 0;
+            transform: scale(0.75);
+            transition: opacity 0.25s ease, transform 0.25s ease;
+            z-index: 50;
+        }
+
+        .pikmin-overlay.visible {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        .pikmin-overlay img {
+            width: min(70vw, 550px);
+            max-height: 80vh;
+            object-fit: contain;
+            filter: drop-shadow(0 16px 28px rgba(0, 0, 0, 0.35));
+        }
     </style>
 </head>
 <body>
+
+    <div id="pikminOverlay" class="pikmin-overlay" aria-hidden="true">
+        <img src="https://pikmin.wiki.gallery/images/thumb/5/56/P4_Red_Pikmin.png/150px-P4_Red_Pikmin.png" alt="Large red Pikmin">
+    </div>
 
     <div class="container">
         <h1>🌱 Pikmin Ambience</h1>
@@ -230,6 +259,9 @@
         const statusDiv = document.getElementById('status');
         const volumeSlider = document.getElementById('volumeSlider');
         const volumeLabel = document.getElementById('volumeLabel');
+        const pikminOverlay = document.getElementById('pikminOverlay');
+
+        let hidePikminTimeout;
 
         // Initialize volume from browser storage (default to 0.5 if not found)
         let savedVolume = localStorage.getItem('pikminVolume');
@@ -243,6 +275,15 @@
         function logToConsole(message) {
             const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
             console.log(`[${time}] ${message}`);
+        }
+
+        function showHugePikmin() {
+            clearTimeout(hidePikminTimeout);
+            pikminOverlay.classList.add('visible');
+
+            hidePikminTimeout = setTimeout(() => {
+                pikminOverlay.classList.remove('visible');
+            }, 2200);
         }
 
         // Handle Volume Changes
@@ -263,6 +304,7 @@
             audio.volume = currentVolume; 
             
             audio.play().catch(e => logToConsole(`Test playback error: ${testSound.split('/').pop()}`));
+            showHugePikmin();
             logToConsole(`🔊 Test sound played: ${testSound.split('/').pop()} at ${Math.round(currentVolume * 100)}% volume`);
         });
 
@@ -296,6 +338,7 @@
                 const audio = new Audio(selectedSound);
                 audio.volume = currentVolume; // Apply current slider volume
                 audio.play().catch(e => logToConsole(`Playback error: ${selectedSound.split('/').pop()}`));
+                showHugePikmin();
 
                 playHistory[selectedSound].push(Date.now());
                 logToConsole(`🎵 Played: ${selectedSound.split('/').pop()}`);
