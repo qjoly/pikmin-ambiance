@@ -6,7 +6,6 @@
     <title>Pikmin Ambience</title>
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
-        /* CSS Variables for easy color management */
         :root {
             --primary-color: #2d6a4f;
             --accent-color: #52b788;
@@ -29,7 +28,6 @@
             overflow: hidden;
         }
 
-        /* Glassmorphism Card Container */
         .container {
             background: var(--glass-bg);
             backdrop-filter: blur(12px);
@@ -59,7 +57,6 @@
             opacity: 0.8;
         }
 
-        /* Styled Button */
         button {
             background-color: var(--accent-color);
             color: white;
@@ -91,53 +88,11 @@
             transform: none;
         }
 
-        /* Status & Log Area */
         #status {
             margin-top: 25px;
             font-weight: 700;
             font-size: 1.05rem;
             height: 24px;
-        }
-
-        #log {
-            margin-top: 15px;
-            height: 160px;
-            overflow-y: auto;
-            background: rgba(255, 255, 255, 0.4);
-            border: 1px solid var(--glass-border);
-            border-radius: 12px;
-            padding: 15px;
-            font-size: 0.9rem;
-            text-align: left;
-            box-shadow: inset 0 2px 5px rgba(0,0,0,0.02);
-        }
-
-        /* Custom Scrollbar for the Log */
-        #log::-webkit-scrollbar {
-            width: 8px;
-        }
-        #log::-webkit-scrollbar-track {
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 10px;
-        }
-        #log::-webkit-scrollbar-thumb {
-            background: rgba(82, 183, 136, 0.5);
-            border-radius: 10px;
-        }
-        #log::-webkit-scrollbar-thumb:hover {
-            background: var(--accent-color);
-        }
-
-        .log-entry {
-            margin-bottom: 6px;
-            border-bottom: 1px solid rgba(0,0,0,0.05);
-            padding-bottom: 4px;
-        }
-        .log-time {
-            font-size: 0.8rem;
-            color: var(--primary-color);
-            opacity: 0.7;
-            margin-right: 5px;
         }
     </style>
 </head>
@@ -145,12 +100,11 @@
 
     <div class="container">
         <h1>🌱 Pikmin Ambience</h1>
-        <p class="subtitle">Relaxing background sounds, strictly regulated.</p>
+        <p class="subtitle">Relaxing, highly spaced ambient sounds.</p>
         
         <button id="startBtn">Awaken Pikmin</button>
         
         <div id="status">Waiting for input...</div>
-        <div id="log"></div>
     </div>
 
     <script>
@@ -158,26 +112,25 @@
         const soundFiles = [
             'sounds/throw.mp3',
             'sounds/death.mp3',
-            'sounds/greet.mp3',
+            'sounds/greet.mp3'
         ];
         
-        const TIME_WINDOW_MS = 10 * 60 * 1000; 
-        const MAX_PLAYS = 2; 
+        const TIME_WINDOW_MS = 10 * 60 * 1000; // 10 minutes limit window
+        const MAX_PLAYS = 2; // Max 2 plays per 10 minutes
 
-        // Sound plays between every 10 to 30 seconds
-        const MIN_INTERVAL = 10000; 
-        const MAX_INTERVAL = 30000; 
+        // Sounds play randomly between 20 and 30 minutes
+        const MIN_INTERVAL = 20 * 60 * 1000; // 20 minutes
+        const MAX_INTERVAL = 30 * 60 * 1000; // 30 minutes
 
         // --- LOGIC ---
         const playHistory = {}; 
         const startBtn = document.getElementById('startBtn');
         const statusDiv = document.getElementById('status');
-        const logDiv = document.getElementById('log');
 
-        function addLog(message) {
+        // Function to log exclusively to the browser console
+        function logToConsole(message) {
             const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-            const logHTML = `<div class="log-entry"><span class="log-time">[${time}]</span> ${message}</div>`;
-            logDiv.innerHTML = logHTML + logDiv.innerHTML;
+            console.log(`[${time}] ${message}`);
         }
 
         function getAvailableSounds() {
@@ -188,7 +141,10 @@
                 if (!playHistory[sound]) {
                     playHistory[sound] = [];
                 }
+                // Remove timestamps older than the time window
                 playHistory[sound] = playHistory[sound].filter(timestamp => (now - timestamp) <= TIME_WINDOW_MS);
+                
+                // Keep sound if it hasn't reached the max plays in the time window
                 if (playHistory[sound].length < MAX_PLAYS) {
                     available.push(sound);
                 }
@@ -205,24 +161,27 @@
                 const selectedSound = availableSounds[randomIndex];
 
                 const audio = new Audio(selectedSound);
-                audio.play().catch(e => addLog(`<em>Error playing ${selectedSound.split('/').pop()}</em>`));
+                audio.play().catch(e => logToConsole(`Playback error: ${selectedSound.split('/').pop()}`));
 
                 playHistory[selectedSound].push(Date.now());
-                addLog(`🎵 Played: <strong>${selectedSound.split('/').pop()}</strong>`);
+                logToConsole(`🎵 Played: ${selectedSound.split('/').pop()}`);
             } else {
-                addLog(`⏳ Skipped: Limits reached for all sounds.`);
+                logToConsole(`⏳ Skipped: Play limits reached for all sounds.`);
             }
 
+            // Schedule the next sound and log the delay in minutes
             const nextDelay = Math.floor(Math.random() * (MAX_INTERVAL - MIN_INTERVAL + 1)) + MIN_INTERVAL;
+            logToConsole(`Next sound in ${(nextDelay / 60000).toFixed(1)} minutes...`);
             setTimeout(playRandomSound, nextDelay);
         }
 
         startBtn.addEventListener('click', () => {
             startBtn.disabled = true;
             startBtn.innerText = "Listening...";
-            statusDiv.innerHTML = "✨ Pikmin are exploring nearby...";
-            addLog("Ecosystem started.");
+            statusDiv.innerHTML = "✨ Pikmin are exploring in silence...";
+            logToConsole("Ecosystem started.");
             
+            // Play the very first sound immediately, then start the 20-30 min loop
             playRandomSound();
         });
     </script>
