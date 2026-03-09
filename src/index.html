@@ -5,21 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pikmin Ambience</title>
     
-    <!-- Favicon -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌱</text></svg>">
     
-    <!-- Primary Meta Tags -->
     <meta name="title" content="Pikmin Ambience">
     <meta name="description" content="Relaxing, highly spaced ambient sounds inspired by Pikmin. Awaken the Pikmin and enjoy peaceful background sounds.">
     
-    <!-- Open Graph / Facebook / Discord -->
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://qjoly.github.io/pikmin-ambiance/">
     <meta property="og:title" content="Pikmin Ambience">
     <meta property="og:description" content="Relaxing, highly spaced ambient sounds inspired by Pikmin. Awaken the Pikmin and enjoy peaceful background sounds.">
     <meta property="og:image" content="https://qjoly.github.io/pikmin-ambiance/preview.png">
     
-    <!-- Twitter -->
     <meta property="twitter:card" content="summary_large_image">
     <meta property="twitter:url" content="https://qjoly.github.io/pikmin-ambiance/">
     <meta property="twitter:title" content="Pikmin Ambience">
@@ -73,10 +69,69 @@
         }
 
         p.subtitle {
-            margin-bottom: 30px;
+            margin-bottom: 20px;
             font-size: 1rem;
             color: var(--text-main);
             opacity: 0.8;
+        }
+
+        /* Volume Control Area */
+        .volume-container {
+            margin: 20px 0;
+            background: rgba(255, 255, 255, 0.4);
+            padding: 15px;
+            border-radius: 16px;
+            border: 1px solid var(--glass-border);
+        }
+
+        .volume-container label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 700;
+            font-size: 0.95rem;
+        }
+
+        /* Custom Range Slider */
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            background: transparent;
+        }
+        
+        input[type=range]:focus {
+            outline: none;
+        }
+        
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 8px;
+            cursor: pointer;
+            background: #a4c3b2;
+            border-radius: 4px;
+        }
+        
+        input[type=range]::-webkit-slider-thumb {
+            height: 20px;
+            width: 20px;
+            border-radius: 50%;
+            background: var(--primary-color);
+            cursor: pointer;
+            -webkit-appearance: none;
+            margin-top: -6px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            transition: transform 0.1s;
+        }
+        
+        input[type=range]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        /* Buttons */
+        .button-group {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-top: 25px;
         }
 
         button {
@@ -110,6 +165,20 @@
             transform: none;
         }
 
+        #testBtn {
+            background-color: transparent;
+            color: var(--primary-color);
+            border: 2px solid var(--primary-color);
+            box-shadow: none;
+            padding: 10px 24px;
+            font-size: 1rem;
+        }
+
+        #testBtn:hover {
+            background-color: rgba(45, 106, 79, 0.1);
+            transform: translateY(-1px);
+        }
+
         #status {
             margin-top: 25px;
             font-weight: 700;
@@ -124,7 +193,15 @@
         <h1>🌱 Pikmin Ambience</h1>
         <p class="subtitle">Relaxing, highly spaced ambient sounds.</p>
         
-        <button id="startBtn">Awaken Pikmin</button>
+        <div class="volume-container">
+            <label for="volumeSlider">Volume: <span id="volumeLabel">50%</span></label>
+            <input type="range" id="volumeSlider" min="0" max="1" step="0.01" value="0.5">
+        </div>
+
+        <div class="button-group">
+            <button id="testBtn">Test Volume</button>
+            <button id="startBtn">Awaken Pikmin</button>
+        </div>
         
         <div id="status">Waiting for input...</div>
     </div>
@@ -146,14 +223,37 @@
 
         // --- LOGIC ---
         const playHistory = {}; 
+        let currentVolume = 0.5; // Default volume (50%)
+
         const startBtn = document.getElementById('startBtn');
+        const testBtn = document.getElementById('testBtn');
         const statusDiv = document.getElementById('status');
+        const volumeSlider = document.getElementById('volumeSlider');
+        const volumeLabel = document.getElementById('volumeLabel');
 
         // Function to log exclusively to the browser console
         function logToConsole(message) {
             const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
             console.log(`[${time}] ${message}`);
         }
+
+        // Handle Volume Changes
+        volumeSlider.addEventListener('input', (event) => {
+            currentVolume = parseFloat(event.target.value);
+            volumeLabel.innerText = Math.round(currentVolume * 100) + '%';
+        });
+
+        // Test Sound Button (Bypasses timers)
+        testBtn.addEventListener('click', () => {
+            const randomIndex = Math.floor(Math.random() * soundFiles.length);
+            const testSound = soundFiles[randomIndex];
+            
+            const audio = new Audio(testSound);
+            audio.volume = currentVolume; 
+            
+            audio.play().catch(e => logToConsole(`Test playback error: ${testSound.split('/').pop()}`));
+            logToConsole(`🔊 Test sound played: ${testSound.split('/').pop()} at ${Math.round(currentVolume * 100)}% volume`);
+        });
 
         function getAvailableSounds() {
             const now = Date.now();
@@ -183,6 +283,7 @@
                 const selectedSound = availableSounds[randomIndex];
 
                 const audio = new Audio(selectedSound);
+                audio.volume = currentVolume; // Apply current slider volume
                 audio.play().catch(e => logToConsole(`Playback error: ${selectedSound.split('/').pop()}`));
 
                 playHistory[selectedSound].push(Date.now());
@@ -200,6 +301,11 @@
         startBtn.addEventListener('click', () => {
             startBtn.disabled = true;
             startBtn.innerText = "Listening...";
+            
+            // Disable the test button so user doesn't interrupt the zen once it starts
+            testBtn.disabled = true; 
+            testBtn.style.opacity = '0.5';
+            
             statusDiv.innerHTML = "✨ Pikmin are exploring in silence...";
             logToConsole("Ecosystem started.");
             
