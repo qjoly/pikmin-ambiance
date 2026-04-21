@@ -91,6 +91,51 @@
             font-size: 0.95rem;
         }
 
+        /* Delay Control Area */
+        .delay-container {
+            margin: 20px 0;
+            background: rgba(255, 255, 255, 0.4);
+            padding: 15px;
+            border-radius: 16px;
+            border: 1px solid var(--glass-border);
+        }
+
+        .delay-container .delay-title {
+            display: block;
+            margin-bottom: 12px;
+            font-weight: 700;
+            font-size: 0.95rem;
+        }
+
+        .delay-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .delay-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .delay-row label {
+            font-size: 0.85rem;
+            font-weight: 700;
+            min-width: 40px;
+            text-align: left;
+        }
+
+        .delay-row input[type=range] {
+            flex: 1;
+        }
+
+        .delay-row .delay-value {
+            font-size: 0.85rem;
+            font-weight: 700;
+            min-width: 52px;
+            text-align: right;
+        }
+
         /* Custom Range Slider */
         input[type=range] {
             -webkit-appearance: none;
@@ -227,6 +272,20 @@
             <input type="range" id="volumeSlider" min="0" max="1" step="0.01" value="0.5">
         </div>
 
+        <div class="delay-container">
+            <span class="delay-title">Delay between sounds</span>
+            <div class="delay-row">
+                <label for="minDelaySlider">Min</label>
+                <input type="range" id="minDelaySlider" min="1" max="60" step="1" value="20">
+                <span class="delay-value"><span id="minDelayLabel">20</span> min</span>
+            </div>
+            <div class="delay-row">
+                <label for="maxDelaySlider">Max</label>
+                <input type="range" id="maxDelaySlider" min="1" max="60" step="1" value="30">
+                <span class="delay-value"><span id="maxDelayLabel">30</span> min</span>
+            </div>
+        </div>
+
         <div class="button-group">
             <button id="testBtn">Test Volume</button>
             <button id="startBtn">Awaken Pikmin</button>
@@ -246,10 +305,6 @@
         const TIME_WINDOW_MS = 10 * 60 * 1000; // 10 minutes limit window
         const MAX_PLAYS = 2; // Max 2 plays per 10 minutes
 
-        // Sounds play randomly between 20 and 30 minutes
-        const MIN_INTERVAL = 20 * 60 * 1000; // 20 minutes
-        const MAX_INTERVAL = 30 * 60 * 1000; // 30 minutes
-
         // --- LOGIC ---
         const playHistory = {}; 
         
@@ -260,6 +315,10 @@
         const volumeSlider = document.getElementById('volumeSlider');
         const volumeLabel = document.getElementById('volumeLabel');
         const pikminOverlay = document.getElementById('pikminOverlay');
+        const minDelaySlider = document.getElementById('minDelaySlider');
+        const maxDelaySlider = document.getElementById('maxDelaySlider');
+        const minDelayLabel = document.getElementById('minDelayLabel');
+        const maxDelayLabel = document.getElementById('maxDelayLabel');
 
         let hidePikminTimeout;
 
@@ -270,6 +329,17 @@
         // Update slider and label on load
         volumeSlider.value = currentVolume;
         volumeLabel.innerText = Math.round(currentVolume * 100) + '%';
+
+        // Initialize min/max delay from browser storage (defaults: 20 and 30 minutes)
+        let savedMinDelay = localStorage.getItem('pikminMinDelay');
+        let savedMaxDelay = localStorage.getItem('pikminMaxDelay');
+        let currentMinDelay = savedMinDelay !== null ? parseInt(savedMinDelay) : 20;
+        let currentMaxDelay = savedMaxDelay !== null ? parseInt(savedMaxDelay) : 30;
+
+        minDelaySlider.value = currentMinDelay;
+        maxDelaySlider.value = currentMaxDelay;
+        minDelayLabel.innerText = currentMinDelay;
+        maxDelayLabel.innerText = currentMaxDelay;
 
         // Function to log exclusively to the browser console
         function logToConsole(message) {
@@ -293,6 +363,32 @@
             
             // Save the new volume to browser storage
             localStorage.setItem('pikminVolume', currentVolume);
+        });
+
+        // Handle Min Delay Changes
+        minDelaySlider.addEventListener('input', () => {
+            currentMinDelay = parseInt(minDelaySlider.value);
+            if (currentMinDelay > currentMaxDelay) {
+                currentMaxDelay = currentMinDelay;
+                maxDelaySlider.value = currentMaxDelay;
+                maxDelayLabel.innerText = currentMaxDelay;
+                localStorage.setItem('pikminMaxDelay', currentMaxDelay);
+            }
+            minDelayLabel.innerText = currentMinDelay;
+            localStorage.setItem('pikminMinDelay', currentMinDelay);
+        });
+
+        // Handle Max Delay Changes
+        maxDelaySlider.addEventListener('input', () => {
+            currentMaxDelay = parseInt(maxDelaySlider.value);
+            if (currentMaxDelay < currentMinDelay) {
+                currentMinDelay = currentMaxDelay;
+                minDelaySlider.value = currentMinDelay;
+                minDelayLabel.innerText = currentMinDelay;
+                localStorage.setItem('pikminMinDelay', currentMinDelay);
+            }
+            maxDelayLabel.innerText = currentMaxDelay;
+            localStorage.setItem('pikminMaxDelay', currentMaxDelay);
         });
 
         // Test Sound Button (Bypasses timers)
@@ -347,7 +443,9 @@
             }
 
             // Schedule the next sound and log the delay in minutes
-            const nextDelay = Math.floor(Math.random() * (MAX_INTERVAL - MIN_INTERVAL + 1)) + MIN_INTERVAL;
+            const minMs = currentMinDelay * 60 * 1000;
+            const maxMs = currentMaxDelay * 60 * 1000;
+            const nextDelay = Math.floor(Math.random() * (maxMs - minMs + 1)) + minMs;
             logToConsole(`Next sound in ${(nextDelay / 60000).toFixed(1)} minutes...`);
             setTimeout(playRandomSound, nextDelay);
         }
