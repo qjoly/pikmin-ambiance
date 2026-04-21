@@ -302,8 +302,10 @@
             'sounds/greet.mp3'
         ];
         
-        const TIME_WINDOW_MS = 10 * 60 * 1000; // 10 minutes limit window
-        const MAX_PLAYS = 2; // Max 2 plays per 10 minutes
+        const MAX_PLAYS = 2; // Max plays per time window
+
+        // TIME_WINDOW_MS is derived from minDelay: window = minDelay * MAX_PLAYS
+        // This is computed dynamically below once delays are loaded.
 
         // --- LOGIC ---
         const playHistory = {}; 
@@ -331,15 +333,18 @@
         volumeLabel.innerText = Math.round(currentVolume * 100) + '%';
 
         // Initialize min/max delay from browser storage (stored in seconds, displayed in minutes, defaults: 20 and 30 minutes)
+        // Values in localStorage are in seconds — the slider shows minutes but internal logic uses seconds directly.
         let savedMinDelay = localStorage.getItem('pikminMinDelay');
         let savedMaxDelay = localStorage.getItem('pikminMaxDelay');
-        let currentMinDelay = savedMinDelay !== null ? Math.round(parseInt(savedMinDelay) / 60) : 20;
-        let currentMaxDelay = savedMaxDelay !== null ? Math.round(parseInt(savedMaxDelay) / 60) : 30;
+        // currentMinDelaySec / currentMaxDelaySec are in seconds
+        let currentMinDelaySec = savedMinDelay !== null ? parseInt(savedMinDelay) : 20 * 60;
+        let currentMaxDelaySec = savedMaxDelay !== null ? parseInt(savedMaxDelay) : 30 * 60;
 
-        minDelaySlider.value = currentMinDelay;
-        maxDelaySlider.value = currentMaxDelay;
-        minDelayLabel.innerText = currentMinDelay;
-        maxDelayLabel.innerText = currentMaxDelay;
+        // Slider shows minutes (rounded for display, but storage is in seconds)
+        minDelaySlider.value = Math.max(1, Math.round(currentMinDelaySec / 60));
+        maxDelaySlider.value = Math.max(1, Math.round(currentMaxDelaySec / 60));
+        minDelayLabel.innerText = Math.max(1, Math.round(currentMinDelaySec / 60));
+        maxDelayLabel.innerText = Math.max(1, Math.round(currentMaxDelaySec / 60));
 
         // Function to log exclusively to the browser console
         function logToConsole(message) {
@@ -367,28 +372,30 @@
 
         // Handle Min Delay Changes
         minDelaySlider.addEventListener('input', () => {
-            currentMinDelay = parseInt(minDelaySlider.value);
-            if (currentMinDelay > currentMaxDelay) {
-                currentMaxDelay = currentMinDelay;
-                maxDelaySlider.value = currentMaxDelay;
-                maxDelayLabel.innerText = currentMaxDelay;
-                localStorage.setItem('pikminMaxDelay', currentMaxDelay * 60);
+            const minMinutes = parseInt(minDelaySlider.value);
+            currentMinDelaySec = minMinutes * 60;
+            if (currentMinDelaySec > currentMaxDelaySec) {
+                currentMaxDelaySec = currentMinDelaySec;
+                maxDelaySlider.value = minMinutes;
+                maxDelayLabel.innerText = minMinutes;
+                localStorage.setItem('pikminMaxDelay', currentMaxDelaySec);
             }
-            minDelayLabel.innerText = currentMinDelay;
-            localStorage.setItem('pikminMinDelay', currentMinDelay * 60);
+            minDelayLabel.innerText = minMinutes;
+            localStorage.setItem('pikminMinDelay', currentMinDelaySec);
         });
 
         // Handle Max Delay Changes
         maxDelaySlider.addEventListener('input', () => {
-            currentMaxDelay = parseInt(maxDelaySlider.value);
-            if (currentMaxDelay < currentMinDelay) {
-                currentMinDelay = currentMaxDelay;
-                minDelaySlider.value = currentMinDelay;
-                minDelayLabel.innerText = currentMinDelay;
-                localStorage.setItem('pikminMinDelay', currentMinDelay * 60);
+            const maxMinutes = parseInt(maxDelaySlider.value);
+            currentMaxDelaySec = maxMinutes * 60;
+            if (currentMaxDelaySec < currentMinDelaySec) {
+                currentMinDelaySec = currentMaxDelaySec;
+                minDelaySlider.value = maxMinutes;
+                minDelayLabel.innerText = maxMinutes;
+                localStorage.setItem('pikminMinDelay', currentMinDelaySec);
             }
-            maxDelayLabel.innerText = currentMaxDelay;
-            localStorage.setItem('pikminMaxDelay', currentMaxDelay * 60);
+            maxDelayLabel.innerText = maxMinutes;
+            localStorage.setItem('pikminMaxDelay', currentMaxDelaySec);
         });
 
         // Test Sound Button (Bypasses timers)
@@ -406,6 +413,8 @@
 
         function getAvailableSounds() {
             const now = Date.now();
+            // TIME_WINDOW_MS adapts to user config: window = minDelay * MAX_PLAYS
+            const timeWindowMs = currentMinDelaySec * MAX_PLAYS * 1000;
             const available = [];
 
             soundFiles.forEach(sound => {
@@ -413,7 +422,7 @@
                     playHistory[sound] = [];
                 }
                 // Remove timestamps older than the time window
-                playHistory[sound] = playHistory[sound].filter(timestamp => (now - timestamp) <= TIME_WINDOW_MS);
+                playHistory[sound] = playHistory[sound].filter(timestamp => (now - timestamp) <= timeWindowMs);
                 
                 // Keep sound if it hasn't reached the max plays in the time window
                 if (playHistory[sound].length < MAX_PLAYS) {
@@ -442,11 +451,16 @@
                 logToConsole(`⏳ Skipped: Play limits reached for all sounds.`);
             }
 
-            // Schedule the next sound and log the delay in minutes
-            const minMs = currentMinDelay * 60 * 1000;
-            const maxMs = currentMaxDelay * 60 * 1000;
+            // Schedule the next sound
+            const minMs = currentMinDelaySec * 1000;
+            const maxMs = currentMaxDelaySec * 1000;
             const nextDelay = Math.floor(Math.random() * (maxMs - minMs + 1)) + minMs;
-            logToConsole(`Next sound in ${(nextDelay / 60000).toFixed(1)} minutes...`);
+            const nextDelaySec = nextDelay / 1000;
+            if (nextDelaySec < 60) {
+                logToConsole(`Next sound in ${nextDelaySec.toFixed(0)}s...`);
+            } else {
+                logToConsole(`Next sound in ${(nextDelaySec / 60).toFixed(1)} minutes...`);
+            }
             setTimeout(playRandomSound, nextDelay);
         }
 
