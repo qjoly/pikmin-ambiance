@@ -330,11 +330,11 @@
         volumeSlider.value = currentVolume;
         volumeLabel.innerText = Math.round(currentVolume * 100) + '%';
 
-        // Initialize min/max delay from browser storage (defaults: 20 and 30 minutes)
+        // Initialize min/max delay from browser storage (stored in seconds, displayed in minutes, defaults: 20 and 30 minutes)
         let savedMinDelay = localStorage.getItem('pikminMinDelay');
         let savedMaxDelay = localStorage.getItem('pikminMaxDelay');
-        let currentMinDelay = savedMinDelay !== null ? parseInt(savedMinDelay) : 20;
-        let currentMaxDelay = savedMaxDelay !== null ? parseInt(savedMaxDelay) : 30;
+        let currentMinDelay = savedMinDelay !== null ? Math.round(parseInt(savedMinDelay) / 60) : 20;
+        let currentMaxDelay = savedMaxDelay !== null ? Math.round(parseInt(savedMaxDelay) / 60) : 30;
 
         minDelaySlider.value = currentMinDelay;
         maxDelaySlider.value = currentMaxDelay;
@@ -372,10 +372,10 @@
                 currentMaxDelay = currentMinDelay;
                 maxDelaySlider.value = currentMaxDelay;
                 maxDelayLabel.innerText = currentMaxDelay;
-                localStorage.setItem('pikminMaxDelay', currentMaxDelay);
+                localStorage.setItem('pikminMaxDelay', currentMaxDelay * 60);
             }
             minDelayLabel.innerText = currentMinDelay;
-            localStorage.setItem('pikminMinDelay', currentMinDelay);
+            localStorage.setItem('pikminMinDelay', currentMinDelay * 60);
         });
 
         // Handle Max Delay Changes
@@ -385,10 +385,10 @@
                 currentMinDelay = currentMaxDelay;
                 minDelaySlider.value = currentMinDelay;
                 minDelayLabel.innerText = currentMinDelay;
-                localStorage.setItem('pikminMinDelay', currentMinDelay);
+                localStorage.setItem('pikminMinDelay', currentMinDelay * 60);
             }
             maxDelayLabel.innerText = currentMaxDelay;
-            localStorage.setItem('pikminMaxDelay', currentMaxDelay);
+            localStorage.setItem('pikminMaxDelay', currentMaxDelay * 60);
         });
 
         // Test Sound Button (Bypasses timers)
